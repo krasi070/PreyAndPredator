@@ -91,9 +91,10 @@ public class SimulatorView extends JFrame
      */
     public void showStatus(int step, Field field)
     {
-        if(!isVisible()) {
+        // This code doesn't allow the user to close the window while the simulation is running
+        /*if(!isVisible()) {
             setVisible(true);
-        }
+        }*/
             
         stepLabel.setText(STEP_PREFIX + step);
         stats.reset();
