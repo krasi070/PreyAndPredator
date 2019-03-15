@@ -11,7 +11,7 @@ import java.util.Map;
  * Colors for each type of species can be defined using the
  * setColor method.
  * 
- * @author David J. Barnes and Michael Kölling
+ * @author David J. Barnes and Michael KГ¶lling
  * @version 2011.07.31
  */
 public class SimulatorView extends JFrame
@@ -25,7 +25,11 @@ public class SimulatorView extends JFrame
     private final String STEP_PREFIX = "Step: ";
     private final String POPULATION_PREFIX = "Population: ";
     private JLabel stepLabel, population;
+    private JButton pauseButton, stepButton;
     private FieldView fieldView;
+    
+    // Has the pause button been pressed
+    private boolean isPaused;
     
     // A map for storing colors for participants in the simulation
     private Map<Class, Color> colors;
@@ -46,6 +50,27 @@ public class SimulatorView extends JFrame
         stepLabel = new JLabel(STEP_PREFIX, JLabel.CENTER);
         population = new JLabel(POPULATION_PREFIX, JLabel.CENTER);
         
+        pauseButton = new JButton("Pause");
+        pauseButton.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent e) {
+        		isPaused = !isPaused;
+        		if (isPaused) {
+        			stepButton.setEnabled(true);
+        		}
+        		else {
+        			stepButton.setEnabled(false);
+        		}
+        	}
+        });
+        
+        stepButton = new JButton("Step");
+        stepButton.setEnabled(false);
+        stepButton.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent e) {
+        		
+        	}
+        });
+        
         setLocation(100, 50);
         
         fieldView = new FieldView(height, width);
@@ -53,7 +78,13 @@ public class SimulatorView extends JFrame
         Container contents = getContentPane();
         contents.add(stepLabel, BorderLayout.NORTH);
         contents.add(fieldView, BorderLayout.CENTER);
-        contents.add(population, BorderLayout.SOUTH);
+        
+        JPanel southPanel = new JPanel();
+        southPanel.add(population);
+        southPanel.add(pauseButton);
+        southPanel.add(stepButton);
+        contents.add(southPanel, BorderLayout.SOUTH);
+        
         
         pack();
         setVisible(true);
@@ -91,7 +122,7 @@ public class SimulatorView extends JFrame
      */
     public void showStatus(int step, Field field)
     {
-        // This code doesn't allow the user to close the window while the simulation is running
+    	// This code doesn't allow the user to close the window while the simulation is running
         /*if(!isVisible()) {
             setVisible(true);
         }*/
@@ -126,6 +157,10 @@ public class SimulatorView extends JFrame
     public boolean isViable(Field field)
     {
         return stats.isViable(field);
+    }
+    
+    public boolean isPaused() {
+    	return isPaused;
     }
     
     /**
