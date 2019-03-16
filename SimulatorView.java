@@ -11,11 +11,13 @@ import java.util.Map;
  * Colors for each type of species can be defined using the
  * setColor method.
  * 
- * @author David J. Barnes and Michael KГ¶lling
+ * @author David J. Barnes and Michael Kölling
  * @version 2011.07.31
  */
-public class SimulatorView extends JFrame
+public class SimulatorView extends JFrame implements ActionListener
 {
+	public Simulator simulator;
+	
     // Colors used for empty locations.
     private static final Color EMPTY_COLOR = Color.white;
 
@@ -24,70 +26,55 @@ public class SimulatorView extends JFrame
 
     private final String STEP_PREFIX = "Step: ";
     private final String POPULATION_PREFIX = "Population: ";
+    private JSplitPane splitPane;
+    private JTabbedPane tabbedPane;
+    private JPanel controlsPanel, animalsPanel;
     private JLabel stepLabel, population;
     private JButton pauseButton, stepButton;
     private FieldView fieldView;
-    
-    // Has the pause button been pressed
-    private boolean isPaused;
     
     // A map for storing colors for participants in the simulation
     private Map<Class, Color> colors;
     // A statistics object computing and storing simulation information
     private FieldStats stats;
 
+    private boolean isPaused;
+	private int stepsToDo;
+    
     /**
      * Create a view of the given width and height.
      * @param height The simulation's height.
      * @param width  The simulation's width.
      */
-    public SimulatorView(int height, int width)
+    public SimulatorView(Simulator sim, int height, int width)
     {
+    	Timer simTimer = new Timer(50, this);
+    	simulator = sim;
+    
         stats = new FieldStats();
         colors = new LinkedHashMap<Class, Color>();
 
         setTitle("Fox and Rabbit Simulation");
-        stepLabel = new JLabel(STEP_PREFIX, JLabel.CENTER);
-        population = new JLabel(POPULATION_PREFIX, JLabel.CENTER);
-        
-        pauseButton = new JButton("Pause");
-        pauseButton.addActionListener(new ActionListener() {
-        	public void actionPerformed(ActionEvent e) {
-        		isPaused = !isPaused;
-        		if (isPaused) {
-        			stepButton.setEnabled(true);
-        		}
-        		else {
-        			stepButton.setEnabled(false);
-        		}
-        	}
-        });
-        
-        stepButton = new JButton("Step");
-        stepButton.setEnabled(false);
-        stepButton.addActionListener(new ActionListener() {
-        	public void actionPerformed(ActionEvent e) {
-        		
-        	}
-        });
         
         setLocation(100, 50);
         
         fieldView = new FieldView(height, width);
+        initComponents();
+        addComponents();
 
-        Container contents = getContentPane();
-        contents.add(stepLabel, BorderLayout.NORTH);
-        contents.add(fieldView, BorderLayout.CENTER);
-        
-        JPanel southPanel = new JPanel();
-        southPanel.add(population);
-        southPanel.add(pauseButton);
-        southPanel.add(stepButton);
-        contents.add(southPanel, BorderLayout.SOUTH);
-        
+        setAnimalColors();
+        //Container contents = getContentPane();
+        //JPanel leftPanel = new JPanel();
+        //Dimension size = fieldView.getPreferredSize();
+        //leftPanel.setPreferredSize(new Dimension(size.width, size.height + 55));
+        //leftPanel.add(stepLabel, BorderLayout.NORTH);
+        //leftPanel.add(fieldView, BorderLayout.CENTER);
+        //leftPanel.add(population, BorderLayout.SOUTH);
         
         pack();
+        showStatus(simulator.getStep(), simulator.getField());
         setVisible(true);
+        simTimer.start();
     }
     
     /**
@@ -159,9 +146,74 @@ public class SimulatorView extends JFrame
         return stats.isViable(field);
     }
     
-    public boolean isPaused() {
-    	return isPaused;
+    public void actionPerformed(ActionEvent e) {
+    	if ((!isPaused || stepsToDo > 0) && isViable(simulator.getField())) {
+    		simulator.simulateOneStep();
+    		showStatus(simulator.getStep(), simulator.getField());
+    		stepsToDo = stepsToDo - 1 < 0 ? 0 : stepsToDo - 1; 
+    	}
+    	
+    	if (e.getSource() == pauseButton) {
+			actPauseButton();
+		}
+		else if (e.getSource() == stepButton) {
+			actStepButton();
+		}
     }
+    
+    private void actPauseButton() {
+		isPaused = !isPaused;
+		if (isPaused) {
+			stepButton.setEnabled(true);
+			pauseButton.setText("Unpause");
+		}
+		else {
+			stepButton.setEnabled(false);
+			pauseButton.setText("Pause");
+		}
+	}
+	
+	private void actStepButton() {
+		stepsToDo++;
+	}
+    
+    private void initComponents() {
+    	stepLabel = new JLabel(STEP_PREFIX, JLabel.CENTER);
+        population = new JLabel(POPULATION_PREFIX, JLabel.CENTER);
+    	
+		pauseButton = new JButton("Pause");
+		pauseButton.addActionListener(this);
+		
+		stepButton = new JButton("Step");
+		stepButton.addActionListener(this);
+		stepButton.setEnabled(false);
+		
+		controlsPanel = new JPanel();
+		animalsPanel = new JPanel();
+		tabbedPane = new JTabbedPane();
+		splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+	}
+	
+	private void addComponents() {
+		controlsPanel.add(pauseButton);
+		controlsPanel.add(stepButton);
+		controlsPanel.add(stepLabel);
+		controlsPanel.add(population);
+		
+		tabbedPane.addTab("Controls", controlsPanel);
+		tabbedPane.addTab("Animals", animalsPanel);
+		tabbedPane.setPreferredSize(fieldView.getPreferredSize());
+		
+		splitPane.setLeftComponent(fieldView);
+		splitPane.setRightComponent(tabbedPane);
+		
+		add(splitPane);
+	}
+	
+	private void setAnimalColors() {
+		setColor(Rabbit.class, Color.blue);
+        setColor(Fox.class, Color.orange);
+	}
     
     /**
      * Provide a graphical view of a rectangular field. This is 
@@ -206,7 +258,8 @@ public class SimulatorView extends JFrame
          */
         public void preparePaint()
         {
-            if(! size.equals(getSize())) {  // if the size has changed...
+        	if (size.equals(new Dimension(0, 0))) {
+            //if(! size.equals(getSize())) {  // if the size has changed...
                 size = getSize();
                 fieldImage = fieldView.createImage(size.width, size.height);
                 g = fieldImage.getGraphics();

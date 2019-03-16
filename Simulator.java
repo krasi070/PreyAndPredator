@@ -8,7 +8,7 @@ import java.awt.Color;
  * A simple predator-prey simulator, based on a rectangular field
  * containing rabbits and foxes.
  * 
- * @author David J. Barnes and Michael KГ¶lling
+ * @author David J. Barnes and Michael Kölling
  * @version 2011.07.31
  */
 public class Simulator
@@ -30,7 +30,6 @@ public class Simulator
     // The current step of the simulation.
     private int step;
     // A graphical view of the simulation.
-    private SimulatorView view;
     
     /**
      * Construct a simulation field with default size.
@@ -56,14 +55,17 @@ public class Simulator
         
         animals = new ArrayList<Animal>();
         field = new Field(depth, width);
-
-        // Create a view of the state of each location in the field.
-        view = new SimulatorView(depth, width);
-        view.setColor(Rabbit.class, Color.orange);
-        view.setColor(Fox.class, Color.blue);
         
         // Setup a valid starting point.
         reset();
+    }
+    
+    public int getStep() {
+    	return step;
+    }
+    
+    public Field getField() {
+    	return field;
     }
     
     /**
@@ -82,12 +84,8 @@ public class Simulator
      */
     public void simulate(int numSteps)
     {
-    	int step = 1;
-    	while (step <= numSteps && view.isViable(field)) {
-    		if (!view.isPaused()) {
-        		simulateOneStep();
-        		step++;
-        	}
+    	for (int step = 1; step <= numSteps; step++) {
+    		simulateOneStep();
     	}
     }
     
@@ -113,8 +111,6 @@ public class Simulator
                
         // Add the newly born foxes and rabbits to the main lists.
         animals.addAll(newAnimals);
-
-        view.showStatus(step, field);
     }
         
     /**
@@ -125,9 +121,6 @@ public class Simulator
         step = 0;
         animals.clear();
         populate();
-        
-        // Show the starting state in the view.
-        view.showStatus(step, field);
     }
     
     /**
