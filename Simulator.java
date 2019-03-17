@@ -29,7 +29,6 @@ public class Simulator
     private Field field;
     // The current step of the simulation.
     private int step;
-    // A graphical view of the simulation.
     
     /**
      * Construct a simulation field with default size.

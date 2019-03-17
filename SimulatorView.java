@@ -1,6 +1,8 @@
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
+import javax.swing.event.*;
+import java.util.Hashtable;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -14,32 +16,46 @@ import java.util.Map;
  * @author David J. Barnes and Michael Kölling
  * @version 2011.07.31
  */
-public class SimulatorView extends JFrame implements ActionListener
+public class SimulatorView extends JFrame implements ActionListener, ChangeListener
 {
-	public Simulator simulator;
-	
     // Colors used for empty locations.
     private static final Color EMPTY_COLOR = Color.white;
 
     // Color used for objects that have no defined color.
     private static final Color UNKNOWN_COLOR = Color.gray;
 
+    private final String WINDOW_TITLE = "Fox and Rabbit Simulation";
+    private final String CONTROLS_TAB_TITLE = "Controls";
+    private final String ANIMALS_TAB_TITLE = "Animals";
     private final String STEP_PREFIX = "Step: ";
     private final String POPULATION_PREFIX = "Population: ";
+    private final String SPEED_PREFIX = "Speed: ";
+    private final String START_BUTTON_TEXT = "Start";
+    private final String STOP_BUTTON_TEXT = "Stop";
+    private final String STEP_BUTTON_TEXT = "Step";
+    private final String RESET_BUTTON_TEXT = "Reset";
+    
+    private final int SPEED_OFFSET = 100;
+    private final int SPEED_SLIDER_MIN_VALUE = 0;
+    private final int SPEED_SLIDER_MAX_VALUE = 90;
+    private final int SPEED_SLIDER_INIT_VALUE = 63;
+    private final int SPEED_SLIDER_TICK_INTERVAL = 9;
+    
+    private Simulator simulator;
+	private Timer simTimer;
+    
     private JSplitPane splitPane;
     private JTabbedPane tabbedPane;
     private JPanel controlsPanel, animalsPanel;
-    private JLabel stepLabel, population;
-    private JButton pauseButton, stepButton;
+    private JLabel stepLabel, populationLabel, speedLabel;
+    private JButton pauseButton, stepButton, resetButton;
+    private JSlider speedSlider;
     private FieldView fieldView;
     
     // A map for storing colors for participants in the simulation
     private Map<Class, Color> colors;
     // A statistics object computing and storing simulation information
     private FieldStats stats;
-
-    private boolean isPaused;
-	private int stepsToDo;
     
     /**
      * Create a view of the given width and height.
@@ -48,14 +64,13 @@ public class SimulatorView extends JFrame implements ActionListener
      */
     public SimulatorView(Simulator sim, int height, int width)
     {
-    	Timer simTimer = new Timer(50, this);
     	simulator = sim;
-    
+    	simTimer = new Timer(SPEED_OFFSET - SPEED_SLIDER_INIT_VALUE, this);
+    	
         stats = new FieldStats();
         colors = new LinkedHashMap<Class, Color>();
 
-        setTitle("Fox and Rabbit Simulation");
-        
+        setTitle(WINDOW_TITLE);        
         setLocation(100, 50);
         
         fieldView = new FieldView(height, width);
@@ -63,18 +78,10 @@ public class SimulatorView extends JFrame implements ActionListener
         addComponents();
 
         setAnimalColors();
-        //Container contents = getContentPane();
-        //JPanel leftPanel = new JPanel();
-        //Dimension size = fieldView.getPreferredSize();
-        //leftPanel.setPreferredSize(new Dimension(size.width, size.height + 55));
-        //leftPanel.add(stepLabel, BorderLayout.NORTH);
-        //leftPanel.add(fieldView, BorderLayout.CENTER);
-        //leftPanel.add(population, BorderLayout.SOUTH);
         
         pack();
         showStatus(simulator.getStep(), simulator.getField());
         setVisible(true);
-        simTimer.start();
     }
     
     /**
@@ -133,7 +140,7 @@ public class SimulatorView extends JFrame implements ActionListener
         }
         stats.countFinished();
 
-        population.setText(POPULATION_PREFIX + stats.getPopulationDetails(field));
+        populationLabel.setText(POPULATION_PREFIX + stats.getPopulationDetails(field));
         fieldView.repaint();
     }
 
@@ -147,46 +154,80 @@ public class SimulatorView extends JFrame implements ActionListener
     }
     
     public void actionPerformed(ActionEvent e) {
-    	if ((!isPaused || stepsToDo > 0) && isViable(simulator.getField())) {
+    	if (simTimer.isRunning() && isViable(simulator.getField())) {
     		simulator.simulateOneStep();
-    		showStatus(simulator.getStep(), simulator.getField());
-    		stepsToDo = stepsToDo - 1 < 0 ? 0 : stepsToDo - 1; 
+        	showStatus(simulator.getStep(), simulator.getField());
     	}
-    	
+    	    	
     	if (e.getSource() == pauseButton) {
 			actPauseButton();
 		}
 		else if (e.getSource() == stepButton) {
 			actStepButton();
 		}
+		else if (e.getSource() == resetButton) {
+			actResetButton();
+		}
+    }
+    
+    public void stateChanged(ChangeEvent e) {
+    	JSlider source = (JSlider)e.getSource();
+        if (source.getValueIsAdjusting()) {
+        	simTimer.setDelay(SPEED_OFFSET - source.getValue());
+        }
     }
     
     private void actPauseButton() {
-		isPaused = !isPaused;
-		if (isPaused) {
-			stepButton.setEnabled(true);
-			pauseButton.setText("Unpause");
-		}
-		else {
-			stepButton.setEnabled(false);
-			pauseButton.setText("Pause");
-		}
+    	if (!simTimer.isRunning()) {
+    		simTimer.start();
+    		stepButton.setEnabled(false);
+			pauseButton.setText(STOP_BUTTON_TEXT);
+    	} 
+    	else {
+    		simTimer.stop();
+    		stepButton.setEnabled(true);
+    		pauseButton.setText(START_BUTTON_TEXT);
+    	}
 	}
 	
 	private void actStepButton() {
-		stepsToDo++;
+		if (isViable(simulator.getField())) {
+			simulator.simulateOneStep();
+			showStatus(simulator.getStep(), simulator.getField());
+		}
+	}
+	
+	private void actResetButton() {
+		if (simTimer.isRunning()) {
+			simTimer.stop();
+    		stepButton.setEnabled(true);
+    		pauseButton.setText(START_BUTTON_TEXT);
+		}
+		
+		simulator.reset();
+		showStatus(simulator.getStep(), simulator.getField());		
 	}
     
     private void initComponents() {
-    	stepLabel = new JLabel(STEP_PREFIX, JLabel.CENTER);
-        population = new JLabel(POPULATION_PREFIX, JLabel.CENTER);
+    	stepLabel = new JLabel(STEP_PREFIX);
+        populationLabel = new JLabel(POPULATION_PREFIX);
+        speedLabel = new JLabel(SPEED_PREFIX);
     	
-		pauseButton = new JButton("Pause");
+		pauseButton = new JButton(START_BUTTON_TEXT);
 		pauseButton.addActionListener(this);
 		
-		stepButton = new JButton("Step");
+		stepButton = new JButton(STEP_BUTTON_TEXT);
 		stepButton.addActionListener(this);
-		stepButton.setEnabled(false);
+		
+		resetButton = new JButton(RESET_BUTTON_TEXT);
+		resetButton.addActionListener(this);
+		
+		speedSlider = new JSlider(
+				JSlider.HORIZONTAL, 
+				SPEED_SLIDER_MIN_VALUE,
+				SPEED_SLIDER_MAX_VALUE,
+				SPEED_SLIDER_INIT_VALUE);
+		speedSlider.addChangeListener(this);
 		
 		controlsPanel = new JPanel();
 		animalsPanel = new JPanel();
@@ -195,13 +236,23 @@ public class SimulatorView extends JFrame implements ActionListener
 	}
 	
 	private void addComponents() {
+		speedSlider.setMajorTickSpacing(SPEED_SLIDER_TICK_INTERVAL);
+		speedSlider.setPaintTicks(true);
+		Hashtable<Integer, JLabel> labelTable = new Hashtable<Integer, JLabel>();
+		labelTable.put(SPEED_SLIDER_MIN_VALUE, new JLabel("Slow"));
+		labelTable.put(SPEED_SLIDER_MAX_VALUE, new JLabel("Fast"));
+		speedSlider.setLabelTable(labelTable);
+		speedSlider.setPaintLabels(true);
+		
 		controlsPanel.add(pauseButton);
 		controlsPanel.add(stepButton);
+		controlsPanel.add(resetButton);
 		controlsPanel.add(stepLabel);
-		controlsPanel.add(population);
+		controlsPanel.add(populationLabel);
+		controlsPanel.add(speedSlider);
 		
-		tabbedPane.addTab("Controls", controlsPanel);
-		tabbedPane.addTab("Animals", animalsPanel);
+		tabbedPane.addTab(CONTROLS_TAB_TITLE, controlsPanel);
+		tabbedPane.addTab(ANIMALS_TAB_TITLE, animalsPanel);
 		tabbedPane.setPreferredSize(fieldView.getPreferredSize());
 		
 		splitPane.setLeftComponent(fieldView);
