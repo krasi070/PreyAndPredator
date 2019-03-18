@@ -35,6 +35,7 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
     private final String STEP_BUTTON_TEXT = "Step";
     private final String RESET_BUTTON_TEXT = "Reset";
     
+    private final int MAX_STEP_AMOUNT = 100;
     private final int SPEED_OFFSET = 100;
     private final int SPEED_SLIDER_MIN_VALUE = 0;
     private final int SPEED_SLIDER_MAX_VALUE = 90;
@@ -50,6 +51,8 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
     private JLabel stepLabel, populationLabel, speedLabel;
     private JButton pauseButton, stepButton, resetButton;
     private JSlider speedSlider;
+    private JSpinner stepSpinner;
+    private JProgressBar ratioBar;
     private FieldView fieldView;
     
     // A map for storing colors for participants in the simulation
@@ -140,6 +143,8 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
         }
         stats.countFinished();
 
+        double ratio = 100.0 * stats.getAnimalPopulation(Rabbit.class) / stats.getWholePopulation();
+        ratioBar.setValue((int)ratio);
         populationLabel.setText(POPULATION_PREFIX + stats.getPopulationDetails(field));
         fieldView.repaint();
     }
@@ -192,7 +197,11 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
 	
 	private void actStepButton() {
 		if (isViable(simulator.getField())) {
-			simulator.simulateOneStep();
+			int stepAmount = Integer.parseInt(stepSpinner.getValue().toString());
+			for (int i = 0; i < stepAmount; i++) {
+				simulator.simulateOneStep();
+			}
+			
 			showStatus(simulator.getStep(), simulator.getField());
 		}
 	}
@@ -209,15 +218,19 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
 	}
     
     private void initComponents() {
-    	stepLabel = new JLabel(STEP_PREFIX);
-        populationLabel = new JLabel(POPULATION_PREFIX);
-        speedLabel = new JLabel(SPEED_PREFIX);
+    	stepLabel = new JLabel(STEP_PREFIX, JLabel.CENTER);
+        populationLabel = new JLabel(POPULATION_PREFIX, JLabel.CENTER);
+        speedLabel = new JLabel(SPEED_PREFIX, JLabel.RIGHT);
     	
 		pauseButton = new JButton(START_BUTTON_TEXT);
 		pauseButton.addActionListener(this);
 		
 		stepButton = new JButton(STEP_BUTTON_TEXT);
 		stepButton.addActionListener(this);
+		
+		stepSpinner = new JSpinner(new SpinnerListModel(getStepStrings()));
+		JSpinner.DefaultEditor spinnerEditor = (JSpinner.DefaultEditor)stepSpinner.getEditor();
+		spinnerEditor.getTextField().setHorizontalAlignment(JTextField.CENTER);
 		
 		resetButton = new JButton(RESET_BUTTON_TEXT);
 		resetButton.addActionListener(this);
@@ -228,6 +241,11 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
 				SPEED_SLIDER_MAX_VALUE,
 				SPEED_SLIDER_INIT_VALUE);
 		speedSlider.addChangeListener(this);
+		
+		ratioBar = new JProgressBar(0, 100);
+		ratioBar.setValue(50);
+		ratioBar.setBackground(Color.orange);
+		ratioBar.setForeground(Color.blue);
 		
 		controlsPanel = new JPanel();
 		animalsPanel = new JPanel();
@@ -244,12 +262,7 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
 		speedSlider.setLabelTable(labelTable);
 		speedSlider.setPaintLabels(true);
 		
-		controlsPanel.add(pauseButton);
-		controlsPanel.add(stepButton);
-		controlsPanel.add(resetButton);
-		controlsPanel.add(stepLabel);
-		controlsPanel.add(populationLabel);
-		controlsPanel.add(speedSlider);
+		layoutControlsPanel();
 		
 		tabbedPane.addTab(CONTROLS_TAB_TITLE, controlsPanel);
 		tabbedPane.addTab(ANIMALS_TAB_TITLE, animalsPanel);
@@ -261,11 +274,91 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
 		add(splitPane);
 	}
 	
+	private void layoutControlsPanel() {
+		controlsPanel.setLayout(new GridBagLayout());
+		GridBagConstraints constraints = new GridBagConstraints();
+		constraints.fill = GridBagConstraints.HORIZONTAL;
+		
+		// Speed Label
+		constraints.insets = new Insets(40, 30, 0, 0);
+		constraints.weightx = 0;
+		constraints.gridx = 0;
+		constraints.gridy = 0;
+		constraints.gridwidth = 1;
+		controlsPanel.add(speedLabel, constraints);
+		
+		// Speed Slider
+		constraints.insets = new Insets(68, 0, 0, 30);
+		constraints.weightx = 0.5;
+		constraints.gridx = 1;
+		constraints.gridwidth = 5;
+		controlsPanel.add(speedSlider, constraints);
+		
+		// Step Button
+		constraints.insets = new Insets(30, 30, 0, 0);
+		constraints.ipady = 10;
+		constraints.weightx = 0.5;
+		constraints.gridy = 1;
+		constraints.gridx = 0;
+		constraints.gridwidth = 3;
+		controlsPanel.add(stepButton, constraints);
+		
+		// Step Spinner
+		constraints.insets = new Insets(30, 30, 0, 30);
+		constraints.gridx = 3;
+		controlsPanel.add(stepSpinner, constraints);
+		
+		// Start Button
+		constraints.insets = new Insets(30, 30, 0, 0);
+		constraints.ipady = 10;
+		constraints.gridx = 0;
+		constraints.gridy = 2;
+		controlsPanel.add(pauseButton, constraints);
+		
+		// Reset Button
+		constraints.insets = new Insets(30, 30, 0, 30);
+		constraints.gridx = 3;
+		controlsPanel.add(resetButton, constraints);
+		
+		// Ratio Bar
+		constraints.insets = new Insets(30, 30, 0, 30);
+		constraints.ipady = 25;
+		constraints.gridy = 3;
+		constraints.gridx = 0;
+		constraints.gridwidth = 6;
+		controlsPanel.add(ratioBar, constraints);
+		
+		// Step Label
+		constraints.insets = new Insets(0, 2, 2, 0);
+		constraints.ipady = 0;
+		constraints.weightx = 0;
+		constraints.weighty = 0.5;
+		constraints.gridx = 0;
+		constraints.gridy = 4;
+		constraints.gridwidth = 6;
+		constraints.anchor = GridBagConstraints.LAST_LINE_START;
+		controlsPanel.add(stepLabel, constraints);
+		
+		// Population Label
+		constraints.weighty = 0;
+		constraints.gridy = 5;
+		controlsPanel.add(populationLabel, constraints);
+	}
+	
 	private void setAnimalColors() {
 		setColor(Rabbit.class, Color.blue);
         setColor(Fox.class, Color.orange);
 	}
     
+	private String[] getStepStrings() {
+		String[] allowedSteps = new String[MAX_STEP_AMOUNT];
+		for (int i = 1; i <= allowedSteps.length; i++) {
+			allowedSteps[i - 1] = i + "";
+		}
+		
+		return allowedSteps;
+	}
+	
     /**
      * Provide a graphical view of a rectangular field. This is 
      * a nested class (a class defined inside a class) which

@@ -47,6 +47,20 @@ public class FieldStats
         return buffer.toString();
     }
     
+    public int getWholePopulation() {
+    	int totalPopulation = 0;
+    	for(Class key : counters.keySet()) {
+            Counter info = counters.get(key);
+            totalPopulation += info.getCount();
+        }
+    	
+    	return totalPopulation;
+    }
+    
+    public int getAnimalPopulation(Class animalClass) {
+    	return counters.get(animalClass).getCount();
+    }
+    
     /**
      * Invalidate the current set of statistics; reset all 
      * counts to zero.
