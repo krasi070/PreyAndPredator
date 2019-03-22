@@ -14,16 +14,16 @@ public class Fox extends Animal
     // Characteristics shared by all foxes (class variables).
     
     // The age at which a fox can start to breed.
-    private static final int BREEDING_AGE = 15;
+    public static int breedingAge = 15;
     // The age to which a fox can live.
-    private static final int MAX_AGE = 150;
+    public static int maxAge = 150;
     // The likelihood of a fox breeding.
-    private static final double BREEDING_PROBABILITY = 0.08;
+    public static double breedingProbability = 0.08;
     // The maximum number of births.
-    private static final int MAX_LITTER_SIZE = 2;
+    public static int maxLitterSize = 2;
     // The food value of a single rabbit. In effect, this is the
     // number of steps a fox can go before it has to eat again.
-    private static final int RABBIT_FOOD_VALUE = 9;
+    public static int rabbitFoodValue = 9;
     // A shared random number generator to control breeding.
     private static final Random rand = Randomizer.getRandom();
     
@@ -45,12 +45,12 @@ public class Fox extends Animal
     {
         super(field, location);
         if(randomAge) {
-            age = rand.nextInt(MAX_AGE);
-            foodLevel = rand.nextInt(RABBIT_FOOD_VALUE);
+            age = rand.nextInt(maxAge);
+            foodLevel = rand.nextInt(rabbitFoodValue);
         }
         else {
             age = 0;
-            foodLevel = RABBIT_FOOD_VALUE;
+            foodLevel = rabbitFoodValue;
         }
     }
     
@@ -90,7 +90,7 @@ public class Fox extends Animal
     private void incrementAge()
     {
         age++;
-        if(age > MAX_AGE) {
+        if(age > maxAge) {
             setDead();
         }
     }
@@ -123,7 +123,7 @@ public class Fox extends Animal
                 Rabbit rabbit = (Rabbit) animal;
                 if(rabbit.isAlive()) { 
                     rabbit.setDead();
-                    foodLevel = RABBIT_FOOD_VALUE;
+                    foodLevel = rabbitFoodValue;
                     // Remove the dead rabbit from the field.
                     return where;
                 }
@@ -159,8 +159,8 @@ public class Fox extends Animal
     private int breed()
     {
         int births = 0;
-        if(canBreed() && rand.nextDouble() <= BREEDING_PROBABILITY) {
-            births = rand.nextInt(MAX_LITTER_SIZE) + 1;
+        if(canBreed() && rand.nextDouble() <= breedingProbability) {
+            births = rand.nextInt(maxLitterSize) + 1;
         }
         return births;
     }
@@ -170,6 +170,6 @@ public class Fox extends Animal
      */
     private boolean canBreed()
     {
-        return age >= BREEDING_AGE;
+        return age >= breedingAge;
     }
 }

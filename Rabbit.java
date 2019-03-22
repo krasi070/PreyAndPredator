@@ -12,17 +12,17 @@ public class Rabbit extends Animal
 {
     // Characteristics shared by all rabbits (class variables).
 
-    // The age at which a rabbit can start to breed.
-    private static final int BREEDING_AGE = 5;
+	// The age at which a rabbit can start to breed.
+    public static int breedingAge = 5;
     // The age to which a rabbit can live.
-    private static final int MAX_AGE = 40;
+    public static int maxAge = 40;
     // The likelihood of a rabbit breeding.
-    private static final double BREEDING_PROBABILITY = 0.12;
+    public static double breedingProbability = 0.12;
     // The maximum number of births.
-    private static final int MAX_LITTER_SIZE = 4;
-    // A shared random number generator to control breeding.
+    public static int maxLitterSize = 4;
+	// A shared random number generator to control breeding.
     private static final Random rand = Randomizer.getRandom();
-    
+	
     // Individual characteristics (instance fields).
     
     // The rabbit's age.
@@ -41,7 +41,7 @@ public class Rabbit extends Animal
         super(field, location);
         age = 0;
         if(randomAge) {
-            age = rand.nextInt(MAX_AGE);
+            age = rand.nextInt(maxAge);
         }
     }
     
@@ -74,7 +74,7 @@ public class Rabbit extends Animal
     private void incrementAge()
     {
         age++;
-        if(age > MAX_AGE) {
+        if(age > maxAge) {
             setDead();
         }
     }
@@ -106,8 +106,8 @@ public class Rabbit extends Animal
     private int breed()
     {
         int births = 0;
-        if(canBreed() && rand.nextDouble() <= BREEDING_PROBABILITY) {
-            births = rand.nextInt(MAX_LITTER_SIZE) + 1;
+        if(canBreed() && rand.nextDouble() <= breedingProbability) {
+            births = rand.nextInt(maxLitterSize) + 1;
         }
         return births;
     }
@@ -118,6 +118,6 @@ public class Rabbit extends Animal
      */
     private boolean canBreed()
     {
-        return age >= BREEDING_AGE;
+        return age >= breedingAge;
     }
 }

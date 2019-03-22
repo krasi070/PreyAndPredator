@@ -1,6 +1,7 @@
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
+import javax.swing.border.TitledBorder;
 import javax.swing.event.*;
 import java.util.Hashtable;
 import java.util.LinkedHashMap;
@@ -25,34 +26,22 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
     private static final Color UNKNOWN_COLOR = Color.gray;
 
     private final String WINDOW_TITLE = "Fox and Rabbit Simulation";
-    private final String CONTROLS_TAB_TITLE = "Controls";
-    private final String ANIMALS_TAB_TITLE = "Animals";
     private final String STEP_PREFIX = "Step: ";
-    private final String POPULATION_PREFIX = "Population: ";
-    private final String SPEED_PREFIX = "Speed: ";
+    private final String RABBIT_POPULATION_PREFIX = "Rabbits: ";
+    private final String FOX_POPULATION_PREFIX = "Foxes: ";
     private final String START_BUTTON_TEXT = "Start";
     private final String STOP_BUTTON_TEXT = "Stop";
-    private final String STEP_BUTTON_TEXT = "Step";
-    private final String RESET_BUTTON_TEXT = "Reset";
     
-    private final int MAX_STEP_AMOUNT = 100;
-    private final int SPEED_OFFSET = 100;
-    private final int SPEED_SLIDER_MIN_VALUE = 0;
-    private final int SPEED_SLIDER_MAX_VALUE = 90;
-    private final int SPEED_SLIDER_INIT_VALUE = 63;
-    private final int SPEED_SLIDER_TICK_INTERVAL = 9;
+    private final int SPEED_OFFSET = 155;
+    private final int SPEED_SLIDER_INIT_VALUE = 105;
     
     private Simulator simulator;
 	private Timer simTimer;
     
     private JSplitPane splitPane;
     private JTabbedPane tabbedPane;
-    private JPanel controlsPanel, animalsPanel;
-    private JLabel stepLabel, populationLabel, speedLabel;
-    private JButton pauseButton, stepButton, resetButton;
-    private JSlider speedSlider;
-    private JSpinner stepSpinner;
-    private JProgressBar ratioBar;
+    private ControlsTab controlsTab;
+    private AnimalsTab animalsTab;
     private FieldView fieldView;
     
     // A map for storing colors for participants in the simulation
@@ -124,7 +113,7 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
             setVisible(true);
         }*/
             
-        stepLabel.setText(STEP_PREFIX + step);
+    	controlsTab.stepLabel.setText(STEP_PREFIX + step);
         stats.reset();
         
         fieldView.preparePaint();
@@ -143,9 +132,11 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
         }
         stats.countFinished();
 
-        double ratio = 100.0 * stats.getAnimalPopulation(Rabbit.class) / stats.getWholePopulation();
-        ratioBar.setValue((int)ratio);
-        populationLabel.setText(POPULATION_PREFIX + stats.getPopulationDetails(field));
+        int rabbitPopulation = stats.getAnimalPopulation(Rabbit.class);
+        double ratio = 100.0 * rabbitPopulation / stats.getWholePopulation();
+        controlsTab.ratioBar.setValue((int)ratio);
+        controlsTab.rabbitPopulationLabel.setText(RABBIT_POPULATION_PREFIX + rabbitPopulation);
+        controlsTab.foxPopulationLabel.setText(FOX_POPULATION_PREFIX + stats.getAnimalPopulation(Fox.class));
         fieldView.repaint();
     }
 
@@ -164,40 +155,45 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
         	showStatus(simulator.getStep(), simulator.getField());
     	}
     	    	
-    	if (e.getSource() == pauseButton) {
+    	if (e.getSource() == controlsTab.pauseButton) {
 			actPauseButton();
 		}
-		else if (e.getSource() == stepButton) {
+		else if (e.getSource() == controlsTab.stepButton) {
 			actStepButton();
 		}
-		else if (e.getSource() == resetButton) {
+		else if (e.getSource() == controlsTab.resetButton) {
 			actResetButton();
 		}
     }
     
     public void stateChanged(ChangeEvent e) {
-    	JSlider source = (JSlider)e.getSource();
-        if (source.getValueIsAdjusting()) {
-        	simTimer.setDelay(SPEED_OFFSET - source.getValue());
-        }
+    	if (e.getSource() == controlsTab.speedSlider) {
+        	simTimer.setDelay(SPEED_OFFSET - controlsTab.speedSlider.getValue());
+    	}
+    	else if (e.getSource() == tabbedPane) {
+    		if (tabbedPane.getSelectedIndex() == 1) {
+    			animalsTab.setCorrectValuesInSpinners();
+    		}
+    	}
+    	
     }
     
     private void actPauseButton() {
     	if (!simTimer.isRunning()) {
     		simTimer.start();
-    		stepButton.setEnabled(false);
-			pauseButton.setText(STOP_BUTTON_TEXT);
+    		controlsTab.stepButton.setEnabled(false);
+    		controlsTab.pauseButton.setText(STOP_BUTTON_TEXT);
     	} 
     	else {
     		simTimer.stop();
-    		stepButton.setEnabled(true);
-    		pauseButton.setText(START_BUTTON_TEXT);
+    		controlsTab.stepButton.setEnabled(true);
+    		controlsTab.pauseButton.setText(START_BUTTON_TEXT);
     	}
 	}
 	
 	private void actStepButton() {
 		if (isViable(simulator.getField())) {
-			int stepAmount = Integer.parseInt(stepSpinner.getValue().toString());
+			int stepAmount = Integer.parseInt(controlsTab.stepSpinner.getValue().toString());
 			for (int i = 0; i < stepAmount; i++) {
 				simulator.simulateOneStep();
 			}
@@ -209,8 +205,8 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
 	private void actResetButton() {
 		if (simTimer.isRunning()) {
 			simTimer.stop();
-    		stepButton.setEnabled(true);
-    		pauseButton.setText(START_BUTTON_TEXT);
+			controlsTab.stepButton.setEnabled(true);
+			controlsTab.pauseButton.setText(START_BUTTON_TEXT);
 		}
 		
 		simulator.reset();
@@ -218,55 +214,24 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
 	}
     
     private void initComponents() {
-    	stepLabel = new JLabel(STEP_PREFIX, JLabel.CENTER);
-        populationLabel = new JLabel(POPULATION_PREFIX, JLabel.CENTER);
-        speedLabel = new JLabel(SPEED_PREFIX, JLabel.RIGHT);
-    	
-		pauseButton = new JButton(START_BUTTON_TEXT);
-		pauseButton.addActionListener(this);
+    	controlsTab = new ControlsTab();
+    	controlsTab.pauseButton.addActionListener(this);
+    	controlsTab.stepButton.addActionListener(this);
+    	controlsTab.resetButton.addActionListener(this);
+    	controlsTab.speedSlider.addChangeListener(this);
 		
-		stepButton = new JButton(STEP_BUTTON_TEXT);
-		stepButton.addActionListener(this);
-		
-		stepSpinner = new JSpinner(new SpinnerListModel(getStepStrings()));
-		JSpinner.DefaultEditor spinnerEditor = (JSpinner.DefaultEditor)stepSpinner.getEditor();
-		spinnerEditor.getTextField().setHorizontalAlignment(JTextField.CENTER);
-		
-		resetButton = new JButton(RESET_BUTTON_TEXT);
-		resetButton.addActionListener(this);
-		
-		speedSlider = new JSlider(
-				JSlider.HORIZONTAL, 
-				SPEED_SLIDER_MIN_VALUE,
-				SPEED_SLIDER_MAX_VALUE,
-				SPEED_SLIDER_INIT_VALUE);
-		speedSlider.addChangeListener(this);
-		
-		ratioBar = new JProgressBar(0, 100);
-		ratioBar.setValue(50);
-		ratioBar.setBackground(Color.orange);
-		ratioBar.setForeground(Color.blue);
-		
-		controlsPanel = new JPanel();
-		animalsPanel = new JPanel();
+    	animalsTab = new AnimalsTab();
 		tabbedPane = new JTabbedPane();
+		tabbedPane.addChangeListener(this);
 		splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
 	}
 	
-	private void addComponents() {
-		speedSlider.setMajorTickSpacing(SPEED_SLIDER_TICK_INTERVAL);
-		speedSlider.setPaintTicks(true);
-		Hashtable<Integer, JLabel> labelTable = new Hashtable<Integer, JLabel>();
-		labelTable.put(SPEED_SLIDER_MIN_VALUE, new JLabel("Slow"));
-		labelTable.put(SPEED_SLIDER_MAX_VALUE, new JLabel("Fast"));
-		speedSlider.setLabelTable(labelTable);
-		speedSlider.setPaintLabels(true);
-		
-		layoutControlsPanel();
-		
-		tabbedPane.addTab(CONTROLS_TAB_TITLE, controlsPanel);
-		tabbedPane.addTab(ANIMALS_TAB_TITLE, animalsPanel);
-		tabbedPane.setPreferredSize(fieldView.getPreferredSize());
+	private void addComponents() {		
+		tabbedPane.addTab(controlsTab.TITLE, controlsTab);
+		tabbedPane.addTab(animalsTab.TITLE, animalsTab);
+		Dimension tabbedPaneSize = fieldView.getPreferredSize();
+		tabbedPaneSize.width = tabbedPaneSize.width / 4 * 3;
+		tabbedPane.setPreferredSize(tabbedPaneSize);
 		
 		splitPane.setLeftComponent(fieldView);
 		splitPane.setRightComponent(tabbedPane);
@@ -274,89 +239,9 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
 		add(splitPane);
 	}
 	
-	private void layoutControlsPanel() {
-		controlsPanel.setLayout(new GridBagLayout());
-		GridBagConstraints constraints = new GridBagConstraints();
-		constraints.fill = GridBagConstraints.HORIZONTAL;
-		
-		// Speed Label
-		constraints.insets = new Insets(40, 30, 0, 0);
-		constraints.weightx = 0;
-		constraints.gridx = 0;
-		constraints.gridy = 0;
-		constraints.gridwidth = 1;
-		controlsPanel.add(speedLabel, constraints);
-		
-		// Speed Slider
-		constraints.insets = new Insets(68, 0, 0, 30);
-		constraints.weightx = 0.5;
-		constraints.gridx = 1;
-		constraints.gridwidth = 5;
-		controlsPanel.add(speedSlider, constraints);
-		
-		// Step Button
-		constraints.insets = new Insets(30, 30, 0, 0);
-		constraints.ipady = 10;
-		constraints.weightx = 0.5;
-		constraints.gridy = 1;
-		constraints.gridx = 0;
-		constraints.gridwidth = 3;
-		controlsPanel.add(stepButton, constraints);
-		
-		// Step Spinner
-		constraints.insets = new Insets(30, 30, 0, 30);
-		constraints.gridx = 3;
-		controlsPanel.add(stepSpinner, constraints);
-		
-		// Start Button
-		constraints.insets = new Insets(30, 30, 0, 0);
-		constraints.ipady = 10;
-		constraints.gridx = 0;
-		constraints.gridy = 2;
-		controlsPanel.add(pauseButton, constraints);
-		
-		// Reset Button
-		constraints.insets = new Insets(30, 30, 0, 30);
-		constraints.gridx = 3;
-		controlsPanel.add(resetButton, constraints);
-		
-		// Ratio Bar
-		constraints.insets = new Insets(30, 30, 0, 30);
-		constraints.ipady = 25;
-		constraints.gridy = 3;
-		constraints.gridx = 0;
-		constraints.gridwidth = 6;
-		controlsPanel.add(ratioBar, constraints);
-		
-		// Step Label
-		constraints.insets = new Insets(0, 2, 2, 0);
-		constraints.ipady = 0;
-		constraints.weightx = 0;
-		constraints.weighty = 0.5;
-		constraints.gridx = 0;
-		constraints.gridy = 4;
-		constraints.gridwidth = 6;
-		constraints.anchor = GridBagConstraints.LAST_LINE_START;
-		controlsPanel.add(stepLabel, constraints);
-		
-		// Population Label
-		constraints.weighty = 0;
-		constraints.gridy = 5;
-		controlsPanel.add(populationLabel, constraints);
-	}
-	
 	private void setAnimalColors() {
 		setColor(Rabbit.class, Color.blue);
         setColor(Fox.class, Color.orange);
-	}
-    
-	private String[] getStepStrings() {
-		String[] allowedSteps = new String[MAX_STEP_AMOUNT];
-		for (int i = 1; i <= allowedSteps.length; i++) {
-			allowedSteps[i - 1] = i + "";
-		}
-		
-		return allowedSteps;
 	}
 	
     /**
