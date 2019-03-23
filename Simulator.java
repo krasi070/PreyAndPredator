@@ -51,7 +51,7 @@ public class Simulator
             depth = DEFAULT_DEPTH;
             width = DEFAULT_WIDTH;
         }
-        
+
         animals = new ArrayList<Animal>();
         field = new Field(depth, width);
         
@@ -61,6 +61,10 @@ public class Simulator
     
     public int getStep() {
     	return step;
+    }
+    
+    public void setStep(int newStep) {
+    	step = newStep;
     }
     
     public Field getField() {
@@ -120,6 +124,18 @@ public class Simulator
         step = 0;
         animals.clear();
         populate();
+    }
+    
+    public void populateFromSave() {
+    	animals.clear();
+    	for(int row = 0; row < field.getDepth(); row++) {
+            for(int col = 0; col < field.getWidth(); col++) {
+            	Animal animal = (Animal)field.getObjectAt(row, col);
+            	if (animal != null) {
+            		animals.add(animal);
+            	}
+            }
+        }
     }
     
     /**

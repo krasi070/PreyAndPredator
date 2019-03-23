@@ -1,8 +1,12 @@
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
+
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
+
 import java.util.Hashtable;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -25,7 +29,8 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
     // Color used for objects that have no defined color.
     private static final Color UNKNOWN_COLOR = Color.gray;
 
-    private final String WINDOW_TITLE = "Fox and Rabbit Simulation";
+    private final String WINDOW_TITLE = "Fox and Rabbit Simulation - ";
+    private final String NEW_FILE = "New File";
     private final String STEP_PREFIX = "Step: ";
     private final String RABBIT_POPULATION_PREFIX = "Rabbits: ";
     private final String FOX_POPULATION_PREFIX = "Foxes: ";
@@ -35,11 +40,16 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
     private final int SPEED_OFFSET = 155;
     private final int SPEED_SLIDER_INIT_VALUE = 105;
     
+    private final JFileChooser fileChooser = new JFileChooser();
+    
+    private File saveFile;
+    
     private Simulator simulator;
 	private Timer simTimer;
     
     private JSplitPane splitPane;
     private JTabbedPane tabbedPane;
+    private SimulationMenuBar menu;
     private ControlsTab controlsTab;
     private AnimalsTab animalsTab;
     private FieldView fieldView;
@@ -56,13 +66,16 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
      */
     public SimulatorView(Simulator sim, int height, int width)
     {
+    	FileNameExtensionFilter filter = new FileNameExtensionFilter("TEXT FILES", "txt", "text");
+    	fileChooser.setFileFilter(filter);
+    	
     	simulator = sim;
     	simTimer = new Timer(SPEED_OFFSET - SPEED_SLIDER_INIT_VALUE, this);
     	
         stats = new FieldStats();
         colors = new LinkedHashMap<Class, Color>();
 
-        setTitle(WINDOW_TITLE);        
+        setTitle(WINDOW_TITLE + NEW_FILE);        
         setLocation(100, 50);
         
         fieldView = new FieldView(height, width);
@@ -72,7 +85,7 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
         setAnimalColors();
         
         pack();
-        showStatus(simulator.getStep(), simulator.getField());
+        showStatus();
         setVisible(true);
     }
     
@@ -106,21 +119,16 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
      * @param step Which iteration step it is.
      * @param field The field whose status is to be displayed.
      */
-    public void showStatus(int step, Field field)
-    {
-    	// This code doesn't allow the user to close the window while the simulation is running
-        /*if(!isVisible()) {
-            setVisible(true);
-        }*/
-            
-    	controlsTab.stepLabel.setText(STEP_PREFIX + step);
+    public void showStatus()
+    {            
+    	controlsTab.stepLabel.setText(STEP_PREFIX + simulator.getStep());
         stats.reset();
         
         fieldView.preparePaint();
 
-        for(int row = 0; row < field.getDepth(); row++) {
-            for(int col = 0; col < field.getWidth(); col++) {
-                Object animal = field.getObjectAt(row, col);
+        for(int row = 0; row < simulator.getField().getDepth(); row++) {
+            for(int col = 0; col < simulator.getField().getWidth(); col++) {
+                Object animal = simulator.getField().getObjectAt(row, col);
                 if(animal != null) {
                     stats.incrementCount(animal.getClass());
                     fieldView.drawMark(col, row, getColor(animal.getClass()));
@@ -130,6 +138,7 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
                 }
             }
         }
+        
         stats.countFinished();
 
         int rabbitPopulation = stats.getAnimalPopulation(Rabbit.class);
@@ -144,15 +153,22 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
      * Determine whether the simulation should continue to run.
      * @return true If there is more than one species alive.
      */
-    public boolean isViable(Field field)
+    public boolean isViable()
     {
-        return stats.isViable(field);
+        return stats.isViable(simulator.getField());
     }
     
     public void actionPerformed(ActionEvent e) {
-    	if (simTimer.isRunning() && isViable(simulator.getField())) {
+    	boolean isViable = isViable();
+    	if (simTimer.isRunning() && isViable) {
     		simulator.simulateOneStep();
-        	showStatus(simulator.getStep(), simulator.getField());
+        	showStatus();
+    	}
+    	
+    	if (!isViable) {
+    		simTimer.stop();
+    		controlsTab.pauseButton.setEnabled(false);
+    		controlsTab.pauseButton.setText(START_BUTTON_TEXT);
     	}
     	    	
     	if (e.getSource() == controlsTab.pauseButton) {
@@ -164,6 +180,16 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
 		else if (e.getSource() == controlsTab.resetButton) {
 			actResetButton();
 		}
+		else if (e.getSource() == menu.openItem) {
+			actOpenItem();
+		}
+		else if (e.getSource() == menu.saveItem) {
+			actSaveItem();
+		}
+		else if (e.getSource() == menu.saveAsItem) {
+			actSaveAsItem();
+		}
+    	
     }
     
     public void stateChanged(ChangeEvent e) {
@@ -192,27 +218,94 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
 	}
 	
 	private void actStepButton() {
-		if (isViable(simulator.getField())) {
-			int stepAmount = Integer.parseInt(controlsTab.stepSpinner.getValue().toString());
-			for (int i = 0; i < stepAmount; i++) {
-				simulator.simulateOneStep();
-			}
-			
-			showStatus(simulator.getStep(), simulator.getField());
+		int stepAmount = Integer.parseInt(controlsTab.stepSpinner.getValue().toString());
+		for (int i = 0; i < stepAmount && isViable(); i++) {
+			simulator.simulateOneStep();
+			UpdateStats();
 		}
+		
+		showStatus();
 	}
 	
 	private void actResetButton() {
 		if (simTimer.isRunning()) {
 			simTimer.stop();
-			controlsTab.stepButton.setEnabled(true);
-			controlsTab.pauseButton.setText(START_BUTTON_TEXT);
 		}
 		
+		controlsTab.stepButton.setEnabled(true);
+		controlsTab.pauseButton.setEnabled(true);
+		controlsTab.pauseButton.setText(START_BUTTON_TEXT);
+		
 		simulator.reset();
-		showStatus(simulator.getStep(), simulator.getField());		
+		showStatus();		
 	}
     
+	private void actSaveItem() {
+		if (saveFile == null) {
+			actSaveAsItem();
+		}
+		else {
+			FileCommander.SaveSimulation(saveFile, simulator.getField(), simulator.getStep());
+		}
+	}
+	
+	private void actSaveAsItem() {
+		int returnVal = fileChooser.showSaveDialog(this);
+
+        if (returnVal == JFileChooser.APPROVE_OPTION) {
+            saveFile = fileChooser.getSelectedFile();
+            FileCommander.SaveSimulation(saveFile, simulator.getField(), simulator.getStep());
+            setTitle(WINDOW_TITLE + saveFile.getPath());   
+        } 
+        else {
+            System.out.println("File not saved!");
+        }
+	}
+	
+	private void actOpenItem() {
+		int returnVal = fileChooser.showOpenDialog(this);
+
+        if (returnVal == JFileChooser.APPROVE_OPTION) {
+            saveFile = fileChooser.getSelectedFile();
+            simulator.setStep(FileCommander.OpenSimulation(saveFile, simulator.getField()));
+            setTitle(WINDOW_TITLE + saveFile.getPath()); 
+            simulator.populateFromSave();
+            showStatus();
+            
+            if (simTimer.isRunning()) {
+            	actPauseButton();
+            }
+            
+            controlsTab.pauseButton.setText(START_BUTTON_TEXT);
+            if (isViable()) {
+            	controlsTab.stepButton.setEnabled(true);
+    			controlsTab.pauseButton.setEnabled(true);
+        	}
+            else {
+            	controlsTab.pauseButton.setEnabled(false);
+            	controlsTab.stepButton.setEnabled(false);
+            }
+        } 
+        else {
+        	System.out.println("File not opened!");
+        }
+	}
+	
+	private void UpdateStats() {
+		stats.reset();
+
+        for(int row = 0; row < simulator.getField().getDepth(); row++) {
+            for(int col = 0; col < simulator.getField().getWidth(); col++) {
+                Object animal = simulator.getField().getObjectAt(row, col);
+                if(animal != null) {
+                    stats.incrementCount(animal.getClass());
+                }
+            }
+        }
+        
+        stats.countFinished();
+	}
+	
     private void initComponents() {
     	controlsTab = new ControlsTab();
     	controlsTab.pauseButton.addActionListener(this);
@@ -220,6 +313,11 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
     	controlsTab.resetButton.addActionListener(this);
     	controlsTab.speedSlider.addChangeListener(this);
 		
+    	menu = new SimulationMenuBar();
+    	menu.openItem.addActionListener(this);
+    	menu.saveItem.addActionListener(this);
+    	menu.saveAsItem.addActionListener(this);
+    	
     	animalsTab = new AnimalsTab();
 		tabbedPane = new JTabbedPane();
 		tabbedPane.addChangeListener(this);
@@ -236,6 +334,7 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
 		splitPane.setLeftComponent(fieldView);
 		splitPane.setRightComponent(tabbedPane);
 		
+		setJMenuBar(menu);
 		add(splitPane);
 	}
 	
