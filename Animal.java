@@ -8,12 +8,15 @@ import java.util.List;
  */
 public abstract class Animal
 {
+	// Animal's age
+	private int age;
     // Whether the animal is alive or not.
     private boolean alive;
     // The animal's field.
     private Field field;
     // The animal's position in the field.
     private Location location;
+    
     
     /**
      * Create a new animal at location in field.
@@ -35,6 +38,14 @@ public abstract class Animal
      */
     abstract public void act(List<Animal> newAnimals);
 
+    public int getAge() {
+    	return age;
+    }
+    
+    public void setAge(int newAge) {
+    	age = newAge;
+    }
+    
     /**
      * Check whether the animal is alive or not.
      * @return true if the animal is still alive.

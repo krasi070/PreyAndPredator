@@ -13,23 +13,27 @@ public class Fox extends Animal
 {
     // Characteristics shared by all foxes (class variables).
     
+	private static final int DEFAULT_BREEDING_AGE = 15;
+    private static final int DEFAULT_MAX_AGE = 150;
+    private static final double DEFAULT_BREEDING_PROBABILITY = 0.08;
+    private static final int DEFAULT_MAX_LITTER_SIZE = 2;
+    private static final int DEFAULT_RABBIT_FOOD_VALUE = 9;
+	
     // The age at which a fox can start to breed.
-    public static int breedingAge = 15;
+    public static int breedingAge = DEFAULT_BREEDING_AGE;
     // The age to which a fox can live.
-    public static int maxAge = 150;
+    public static int maxAge = DEFAULT_MAX_AGE;
     // The likelihood of a fox breeding.
-    public static double breedingProbability = 0.08;
+    public static double breedingProbability = DEFAULT_BREEDING_PROBABILITY;
     // The maximum number of births.
-    public static int maxLitterSize = 2;
+    public static int maxLitterSize = DEFAULT_MAX_LITTER_SIZE;
     // The food value of a single rabbit. In effect, this is the
     // number of steps a fox can go before it has to eat again.
-    public static int rabbitFoodValue = 9;
+    public static int rabbitFoodValue = DEFAULT_RABBIT_FOOD_VALUE;
     // A shared random number generator to control breeding.
     private static final Random rand = Randomizer.getRandom();
     
     // Individual characteristics (instance fields).
-    // The fox's age.
-    private int age;
     // The fox's food level, which is increased by eating rabbits.
     private int foodLevel;
 
@@ -45,13 +49,29 @@ public class Fox extends Animal
     {
         super(field, location);
         if(randomAge) {
-            age = rand.nextInt(maxAge);
+            setAge(rand.nextInt(maxAge));
             foodLevel = rand.nextInt(rabbitFoodValue);
         }
         else {
-            age = 0;
+            setAge(0);
             foodLevel = rabbitFoodValue;
         }
+    }
+    
+    public int getFoodLevel() {
+    	return foodLevel;
+    }
+    
+    public void setFoodLevel(int newFoodLevel) {
+    	foodLevel = newFoodLevel;
+    }
+    
+    public static void setDefaultValues() {
+    	breedingAge = DEFAULT_BREEDING_AGE;
+    	maxAge = DEFAULT_MAX_AGE;
+    	breedingProbability = DEFAULT_BREEDING_PROBABILITY;
+    	maxLitterSize = DEFAULT_MAX_LITTER_SIZE;
+    	rabbitFoodValue = DEFAULT_RABBIT_FOOD_VALUE;
     }
     
     /**
@@ -83,14 +103,14 @@ public class Fox extends Animal
             }
         }
     }
-
+    
     /**
      * Increase the age. This could result in the fox's death.
      */
     private void incrementAge()
     {
-        age++;
-        if(age > maxAge) {
+        setAge(getAge() + 1);
+        if(getAge() > maxAge) {
             setDead();
         }
     }
@@ -170,6 +190,6 @@ public class Fox extends Animal
      */
     private boolean canBreed()
     {
-        return age >= breedingAge;
+        return getAge() >= breedingAge;
     }
 }

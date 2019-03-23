@@ -12,21 +12,23 @@ public class Rabbit extends Animal
 {
     // Characteristics shared by all rabbits (class variables).
 
+	private static final int DEFAULT_BREEDING_AGE = 5;
+    private static final int DEFAULT_MAX_AGE = 40;
+    private static final double DEFAULT_BREEDING_PROBABILITY = 0.12;
+    private static final int DEFAULT_MAX_LITTER_SIZE = 4;
+	
 	// The age at which a rabbit can start to breed.
-    public static int breedingAge = 5;
+    public static int breedingAge = DEFAULT_BREEDING_AGE;
     // The age to which a rabbit can live.
-    public static int maxAge = 40;
+    public static int maxAge = DEFAULT_MAX_AGE;
     // The likelihood of a rabbit breeding.
-    public static double breedingProbability = 0.12;
+    public static double breedingProbability = DEFAULT_BREEDING_PROBABILITY;
     // The maximum number of births.
-    public static int maxLitterSize = 4;
+    public static int maxLitterSize = DEFAULT_MAX_LITTER_SIZE;
 	// A shared random number generator to control breeding.
     private static final Random rand = Randomizer.getRandom();
 	
     // Individual characteristics (instance fields).
-    
-    // The rabbit's age.
-    private int age;
 
     /**
      * Create a new rabbit. A rabbit may be created with age
@@ -39,10 +41,17 @@ public class Rabbit extends Animal
     public Rabbit(boolean randomAge, Field field, Location location)
     {
         super(field, location);
-        age = 0;
+        setAge(0);
         if(randomAge) {
-            age = rand.nextInt(maxAge);
+            setAge(rand.nextInt(maxAge));
         }
+    }
+    
+    public static void setDefaultValues() {
+    	breedingAge = DEFAULT_BREEDING_AGE;
+    	maxAge = DEFAULT_MAX_AGE;
+    	breedingProbability = DEFAULT_BREEDING_PROBABILITY;
+    	maxLitterSize = DEFAULT_MAX_LITTER_SIZE;
     }
     
     /**
@@ -73,8 +82,8 @@ public class Rabbit extends Animal
      */
     private void incrementAge()
     {
-        age++;
-        if(age > maxAge) {
+        setAge(getAge() + 1);
+        if(getAge() > maxAge) {
             setDead();
         }
     }
@@ -118,6 +127,6 @@ public class Rabbit extends Animal
      */
     private boolean canBreed()
     {
-        return age >= breedingAge;
+        return getAge() >= breedingAge;
     }
 }
