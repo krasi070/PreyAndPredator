@@ -3,11 +3,9 @@ import java.awt.event.*;
 import java.io.File;
 
 import javax.swing.*;
-import javax.swing.border.TitledBorder;
 import javax.swing.event.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-import java.util.Hashtable;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -83,6 +81,12 @@ public class SimulatorView extends JFrame implements ActionListener, ChangeListe
         addComponents();
 
         setAnimalColors();
+        
+        addWindowListener(new WindowAdapter() {
+        	public void windowClosing(WindowEvent we) {
+        		System.exit(0);
+        	} 
+        });
         
         pack();
         showStatus();

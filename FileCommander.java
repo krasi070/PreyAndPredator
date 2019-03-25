@@ -31,8 +31,8 @@ public class FileCommander {
 			Fox.maxLitterSize = reader.nextInt();
 			Fox.rabbitFoodValue = reader.nextInt();
 			
-			for (int i = 0; i < field.getWidth(); i++) {
-				for (int j = 0; j < field.getDepth(); j++) {
+			for (int i = 0; i < field.getDepth(); i++) {
+				for (int j = 0; j < field.getWidth(); j++) {
 					String cell = reader.next();
 					if (!cell.equals(EMPTY)) {
 						if (cell.startsWith(RABBIT)) {
@@ -56,7 +56,7 @@ public class FileCommander {
 			
 			return steps;
 		}
-		catch(IOException e) {
+		catch(Exception e) {
 			displayErrorMessage();
 			System.out.println(e.getMessage());
 		}
@@ -83,8 +83,8 @@ public class FileCommander {
 					Fox.rabbitFoodValue);
 			writer.newLine();
 			
-			for (int i = 0; i < field.getWidth(); i++) {
-				for (int j = 0; j < field.getDepth(); j++) {
+			for (int i = 0; i < field.getDepth(); i++) {
+				for (int j = 0; j < field.getWidth(); j++) {
 					Animal animal = (Animal)field.getObjectAt(i, j);
 					if (animal instanceof Rabbit) {
 						writer.write(RABBIT + animal.getAge() + " ");
@@ -101,7 +101,7 @@ public class FileCommander {
 				writer.newLine();
 			}
 		}
-		catch (IOException e) {
+		catch (Exception e) {
 			System.out.println(e.getMessage());
 		}
 	}
@@ -109,7 +109,7 @@ public class FileCommander {
 	private static void displayErrorMessage() {
 		JOptionPane.showMessageDialog(null,
 			    "The selected file was not in the correct format!",
-			    "Inane error",
+			    "Error",
 			    JOptionPane.ERROR_MESSAGE);
 	}
 }

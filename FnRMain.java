@@ -2,8 +2,10 @@
 public class FnRMain {
 
 	public static void main(String[] args) {
-		Simulator s = new Simulator(100, 100);
-		SimulatorView view = new SimulatorView(s, 100, 100);
+		int height = 100;
+		int width = 100;
+		Simulator s = new Simulator(height, width);
+		SimulatorView view = new SimulatorView(s, height, width);
 	}
 
 }
